@@ -1,0 +1,4 @@
+TimbreNet/datasets/450pianoChordDataset/audio/*
+TimbreNet/generated_chords/*
+TimbreNet/preliminar_results/TimbreNet_PianoChordVae/*
+TimbreNet/trained_models/450_piano_chords/latent_8*
