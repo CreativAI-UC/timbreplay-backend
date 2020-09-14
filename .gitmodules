@@ -1,0 +1,4 @@
+[submodule "TimbreNet"]
+	path = TimbreNet
+	url = https://github.com/CreativAI-UC/TimbreNet.git
+	branch = deploy
