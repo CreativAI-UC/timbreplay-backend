@@ -1,5 +1,6 @@
 #!/bin/bash
 app="timbreplay.starlette"
-version="1"
-docker build -t ${app}:${version} .
-docker run -d -p 56734:80 --name=${app} ${app}:${version}
+env="dev"
+version="9"
+docker build -t ${app}.${env}:${version} .
+docker run -d -p 80:80 --name=${app}.${env}.v${version} ${app}.${env}:${version}
