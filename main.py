@@ -8,6 +8,9 @@ from TimbreNet.lib.model import CVAE as Model
 from starlette.middleware import Middleware
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.middleware.cors import CORSMiddleware
+from starlette.background import BackgroundTask
+import random
+import os 
 
 spec_helper = SpecgramsHelper(audio_length=64000,
                               spec_shape=(128, 1024),
@@ -37,41 +40,45 @@ async def sample(request):
 
 
 async def generate_midi(request):
-    print(request)
 
-    x = request.query_params['x']
-    y = request.query_params['y']
-    #Select sample points
-    sample_points = [[float(x), float(y)]]
-    # make sure mapings between d3 and latent map match
-    # sample_points = [[7, 8]]
-    # sample_points = [[7, 8], [18, -18],
-                    #  [18, -7], [7, -30], [39, -10], [17, 10]]
-    '''
-    sample_points = [[11.7 , 8.9, 12.8, 16.2,- 2.6,- 4.3,- 9.1, 21.0],
-                    [- 8.0 , 9.6,-23.6, 20.0, 13.5,  8.0,-14.6,  3.1],
-                    [-11.6 , 5.9,- 9.0,- 0.5,-25.4,-15.3,  3.1,  4.9],
-                    [  6.3 , 3.9,  2.1,  9.1,-16.4,-13.8,- 1.8, 10.9]]
-                    '''
+    try:
+        x = request.query_params['x']
+        y = request.query_params['y']
+
+        sample_points = [[float(x), float(y)]]
+    except KeyError:
+        return JSONResponse({"reason": "Expecting X and Y on query params"}, status_code=400)
+    except ValueError:
+        return JSONResponse({"reason": "Expecting a number for X and Y coordinates"}, status_code=400)
+
 
     #Select path for saving chords
-    chord_saving_path = './midi/new'
+    chord_saving_path = './midi/'
 
     filename=generate_chord_from_trained_model(trained_model_path,
                                       latent_dim,
                                       sample_points,
                                       chord_saving_path,model,spec_helper)
 
-    return FileResponse(filename)
+    deleteTask = BackgroundTask(remove_file, filename=filename)
+    return FileResponse(filename,background=deleteTask)
 
+
+async def remove_file(filename):
+    if os.path.exists(filename):
+        os.remove(filename)
+    wav_name=filename.replace(".mp3",".wav")
+    if os.path.exists(wav_name):
+        os.remove(wav_name)
+    
 middleware = [
     Middleware(CORSMiddleware, allow_origins=['*'], 
     allow_methods=["GET","OPTIONS"],
     allow_headers=["*"]),
-    Middleware(GZipMiddleware, minimum_size=1000),
+    Middleware(GZipMiddleware, minimum_size=400),
 ]
 
-app = Starlette(debug=True, routes=[
+app = Starlette(debug=False, routes=[
     Route('/', home),
     Route('/sample', sample),
     Route('/generate', generate_midi),
